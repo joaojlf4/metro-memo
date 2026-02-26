@@ -3,7 +3,7 @@
 import { Wrapper } from '../Wrapper';
 
 type MainMenuProps = {
-  onSelectMode: (mode: 'quiz' | 'explorer' | 'order-quiz') => void;
+  onSelectMode: (mode: 'quiz' | 'explorer' | 'order-quiz' | 'station-quiz' | 'route-finder') => void;
 };
 
 export function MainMenu({ onSelectMode }: MainMenuProps) {
@@ -34,6 +34,20 @@ export function MainMenu({ onSelectMode }: MainMenuProps) {
           className="px-6 py-4 border-2 border-gray-800 hover:bg-gray-800 hover:text-white transition-colors font-medium cursor-pointer"
         >
           Quiz: Ordem das estações
+        </button>
+
+        <button
+          onClick={() => onSelectMode('station-quiz')}
+          className="px-6 py-4 border-2 border-gray-800 hover:bg-gray-800 hover:text-white transition-colors font-medium cursor-pointer"
+        >
+          Quiz: Quais linhas passam?
+        </button>
+
+        <button
+          onClick={() => onSelectMode('route-finder')}
+          className="px-6 py-4 border-2 border-gray-800 hover:bg-gray-800 hover:text-white transition-colors font-medium cursor-pointer"
+        >
+          Melhor Rota
         </button>
       </div>
     </Wrapper>

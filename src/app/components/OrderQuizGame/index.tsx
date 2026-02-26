@@ -9,6 +9,7 @@ import { OptionButton } from '../OptionButton';
 import { HintModal } from '../HintModal';
 import { BackButton } from '../BackButton';
 import { Wrapper } from '../Wrapper';
+import { StationSearch } from '../StationSearch';
 
 type OrderQuizGameProps = {
   subwayData: SubwayData;
@@ -29,6 +30,7 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
   const [path, setPath] = useState<OrderQuizPath>([]);
   const [isHintModalOpen, setIsHintModalOpen] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [mode, setMode] = useState<'input' | 'options'>('input');
 
   // Auto-scroll para o final do breadcrumb quando path mudar
   useEffect(() => {
@@ -73,12 +75,19 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
     setQuestion(generateOrderQuizQuestion(subwayData, lineName, 0, numberOfOptions));
   };
 
+  const toggleMode = () => {
+    setMode((prev) => (prev === 'input' ? 'options' : 'input'));
+  };
+
   const isAnswered = selectedStation !== null;
   const isCorrect = isAnswered ? selectedStation === question.correctStation : null;
   const lineColor = LINE_COLORS[question.line];
 
   const correctCount = path.filter((p) => p.isCorrect).length;
   const wrongCount = path.filter((p) => !p.isCorrect).length;
+
+  // Pegar todas as estações da linha atual para o StationSearch
+  const allStationsInLine = subwayData[lineName];
 
   if (isFinished) {
     return (
@@ -182,33 +191,74 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
           Qual é a próxima estação?
         </p>
 
-        <div className="grid grid-cols-1 gap-3">
-          {question.options.map((station: string) => (
-            <OptionButton
-              key={station}
-              station={station}
-              onClick={() => handleAnswer(station)}
-              disabled={isAnswered}
-              isCorrect={station === question.correctStation}
-              isSelected={station === selectedStation}
-              lineColor={lineColor?.color}
-              lineTextColor={lineColor?.textColor}
-            />
-          ))}
-        </div>
+        <button
+          onClick={toggleMode}
+          className="text-sm text-gray-400 hover:text-gray-300 underline cursor-pointer self-center transition-colors"
+        >
+          {mode === 'input' ? 'Trocar para opções' : 'Trocar para digitação'}
+        </button>
 
-        {isAnswered && !isCorrect && (
+        {mode === 'input' ? (
           <div className="flex flex-col gap-4">
-            <p className="text-center text-lg font-medium text-red-800">
-              ✗ Incorreto!
-            </p>
-            <button
-              onClick={handleNext}
-              className="cursor-pointer px-6 py-3 border-2 border-black hover:bg-black hover:text-white transition-colors font-medium"
-            >
-              {currentPosition + 1 < totalStations ? 'Próxima Estação' : 'Ver Resultado'}
-            </button>
+            <StationSearch
+              key={currentPosition}
+              stations={allStationsInLine}
+              onSelect={handleAnswer}
+              placeholder="Digite o nome da próxima estação..."
+            />
+            
+            {isAnswered && (
+              <div className="border-2 border-gray-800 p-4 text-center">
+                {isCorrect ? (
+                  <p className="text-green-500 font-medium">✓ Correto!</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-red-800 font-medium">✗ Incorreto!</p>
+                    <p className="text-sm text-gray-300">
+                      A estação correta era: <span className="font-medium">{question.correctStation}</span>
+                    </p>
+                    <button
+                      onClick={handleNext}
+                      className="cursor-pointer px-6 py-3 border-2 border-gray-800 hover:bg-gray-800 hover:text-white transition-colors font-medium"
+                    >
+                      {currentPosition + 1 < totalStations ? 'Próxima Estação' : 'Ver Resultado'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3">
+              {question.options.map((station: string) => (
+                <OptionButton
+                  key={station}
+                  station={station}
+                  onClick={() => handleAnswer(station)}
+                  disabled={isAnswered}
+                  isCorrect={station === question.correctStation}
+                  isSelected={station === selectedStation}
+                  lineColor={lineColor?.color}
+                  lineTextColor={lineColor?.textColor}
+                />
+              ))}
+            </div>
+
+            {isAnswered && !isCorrect && (
+              <div className="flex flex-col gap-4">
+                <p className="text-center text-lg font-medium text-red-800">
+                  ✗ Incorreto!
+                </p>
+                <button
+                  onClick={handleNext}
+                  className="cursor-pointer px-6 py-3 border-2 border-black hover:bg-black hover:text-white transition-colors font-medium"
+                >
+                  {currentPosition + 1 < totalStations ? 'Próxima Estação' : 'Ver Resultado'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

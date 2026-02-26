@@ -35,3 +35,20 @@ export type OrderQuizPath = {
   station: string;
   isCorrect: boolean;
 }[];
+
+export type StationQuizQuestion = {
+  station: string;
+  correctLines: string[];
+  options: string[];
+};
+
+export type RouteSegment = {
+  station: string;
+  line: string;
+  isTransfer: boolean;
+};
+
+export type Route = {
+  segments: RouteSegment[];
+  totalStations: number;
+};
