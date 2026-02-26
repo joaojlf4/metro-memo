@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MainMenu, QuizSetup, QuizGame, LineExplorer, LineSelect, OrderQuizGame } from "./components";
-import { QuizSettings } from "@/core/types";
+import { QuizSettings } from "core/types";
 import subwayData from "../../subway.json";
 
 type AppMode = 'menu' | 'quiz-setup' | 'quiz' | 'explorer' | 'order-quiz-setup' | 'order-quiz';
