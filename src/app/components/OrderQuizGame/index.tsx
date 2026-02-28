@@ -31,6 +31,8 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
   const [isHintModalOpen, setIsHintModalOpen] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [mode, setMode] = useState<'input' | 'options'>('input');
+  const [flashColor, setFlashColor] = useState<'green' | 'red' | null>(null);
+  const [clearTrigger, setClearTrigger] = useState(0);
 
   // Auto-scroll para o final do breadcrumb quando path mudar
   useEffect(() => {
@@ -39,18 +41,46 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
     }
   }, [path]);
 
+  // Suporte a teclas numéricas (somente no modo options)
+  useEffect(() => {
+    if (mode !== 'options' || isHintModalOpen) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (selectedStation !== null) return;
+
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= question.options.length) {
+        handleAnswer(question.options[num - 1]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [mode, question.options, selectedStation, isHintModalOpen]);
+
   const handleAnswer = (station: string) => {
     if (selectedStation !== null) return;
 
     setSelectedStation(station);
     const isCorrect = station === question.correctStation;
 
-    // Adicionar ao caminho - sempre a estação CORRETA, mas marcando se acertou ou errou
-    setPath((prev) => [...prev, { station: question.correctStation, isCorrect }]);
+    // Flash de feedback
+    setFlashColor(isCorrect ? 'green' : 'red');
+    setTimeout(() => setFlashColor(null), 300);
 
-    // Se acertou, avança automaticamente
     if (isCorrect) {
-      handleNext();
+      // Adicionar ao caminho quando acerta
+      setPath((prev) => [...prev, { station: question.correctStation, isCorrect: true }]);
+      
+      // Avança para a próxima
+      setTimeout(() => {
+        handleNext();
+      }, mode === 'input' ? 300 : 0);
+    } else {
+      // Se errou, reinicia do zero
+      setTimeout(() => {
+        handleRestart();
+      }, mode === 'input' ? 300 : 1000);
     }
   };
 
@@ -65,6 +95,11 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
     setCurrentPosition(newPosition);
     setSelectedStation(null);
     setQuestion(generateOrderQuizQuestion(subwayData, lineName, newPosition, numberOfOptions));
+    
+    // Trigger para limpar e focar input no modo input
+    if (mode === 'input') {
+      setClearTrigger(prev => prev + 1);
+    }
   };
 
   const handleRestart = () => {
@@ -73,6 +108,7 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
     setPath([]);
     setIsFinished(false);
     setQuestion(generateOrderQuizQuestion(subwayData, lineName, 0, numberOfOptions));
+    setClearTrigger(prev => prev + 1);
   };
 
   const toggleMode = () => {
@@ -91,7 +127,7 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
 
   if (isFinished) {
     return (
-      <Wrapper>
+      <Wrapper flashColor={flashColor}>
         <h2 className="text-2xl font-medium">Quiz Concluído!</h2>
         
         <div className="border-2 border-gray-800 p-6 w-full max-w-2xl">
@@ -140,7 +176,7 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
   }
 
   return (
-    <Wrapper>
+    <Wrapper flashColor={flashColor}>
       <div className="flex justify-between items-center w-full max-w-2xl">
         <BackButton onClick={onExit} />
         <div className="flex gap-6 text-sm">
@@ -201,40 +237,20 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
         {mode === 'input' ? (
           <div className="flex flex-col gap-4">
             <StationSearch
-              key={currentPosition}
+              key={`${currentPosition}-${clearTrigger}`}
               stations={allStationsInLine}
               onSelect={handleAnswer}
               placeholder="Digite o nome da próxima estação..."
+              autoFocus={true}
             />
-            
-            {isAnswered && (
-              <div className="border-2 border-gray-800 p-4 text-center">
-                {isCorrect ? (
-                  <p className="text-green-500 font-medium">✓ Correto!</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-red-800 font-medium">✗ Incorreto!</p>
-                    <p className="text-sm text-gray-300">
-                      A estação correta era: <span className="font-medium">{question.correctStation}</span>
-                    </p>
-                    <button
-                      onClick={handleNext}
-                      className="cursor-pointer px-6 py-3 border-2 border-gray-800 hover:bg-gray-800 hover:text-white transition-colors font-medium"
-                    >
-                      {currentPosition + 1 < totalStations ? 'Próxima Estação' : 'Ver Resultado'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-3">
-              {question.options.map((station: string) => (
+              {question.options.map((station: string, index: number) => (
                 <OptionButton
                   key={station}
-                  station={station}
+                  station={`${index + 1}. ${station}`}
                   onClick={() => handleAnswer(station)}
                   disabled={isAnswered}
                   isCorrect={station === question.correctStation}
@@ -246,16 +262,8 @@ export function OrderQuizGame({ subwayData, lineName, numberOfOptions, onExit }:
             </div>
 
             {isAnswered && !isCorrect && (
-              <div className="flex flex-col gap-4">
-                <p className="text-center text-lg font-medium text-red-800">
-                  ✗ Incorreto!
-                </p>
-                <button
-                  onClick={handleNext}
-                  className="cursor-pointer px-6 py-3 border-2 border-black hover:bg-black hover:text-white transition-colors font-medium"
-                >
-                  {currentPosition + 1 < totalStations ? 'Próxima Estação' : 'Ver Resultado'}
-                </button>
+              <div className="text-center text-lg font-medium text-red-800">
+                ✗ Recomeçando...
               </div>
             )}
           </>

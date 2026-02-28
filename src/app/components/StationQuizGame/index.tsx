@@ -27,6 +27,22 @@ export function StationQuizGame({
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState<QuizScore>({ correct: 0, wrong: 0, total: 0 });
   const [isHintModalOpen, setIsHintModalOpen] = useState(false);
+  const [flashColor, setFlashColor] = useState<'green' | 'red' | null>(null);
+
+  // Suporte a teclas numéricas
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (isAnswered || isHintModalOpen) return;
+
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= question.options.length) {
+        handleLineToggle(question.options[num - 1]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [question.options, isAnswered, isHintModalOpen, selectedLines]);
 
   const handleLineToggle = (line: string) => {
     if (isAnswered) return;
@@ -51,6 +67,10 @@ export function StationQuizGame({
     const isCorrect =
       selectedArray.length === correctArray.length &&
       selectedArray.every((line, index) => line === correctArray[index]);
+
+    // Flash de feedback
+    setFlashColor(isCorrect ? 'green' : 'red');
+    setTimeout(() => setFlashColor(null), 300);
 
     setScore((prev) => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
@@ -78,7 +98,7 @@ export function StationQuizGame({
   };
 
   return (
-    <Wrapper>
+    <Wrapper flashColor={flashColor}>
       <div className="flex justify-between items-center w-full max-w-2xl">
         <BackButton onClick={onExit} />
         <ScoreDisplay score={score} />
@@ -98,7 +118,7 @@ export function StationQuizGame({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {question.options.map((line) => {
+          {question.options.map((line, index) => {
             const lineColor = LINE_COLORS[line];
             const status = getLineStatus(line);
             const isSelected = selectedLines.has(line);
@@ -144,7 +164,7 @@ export function StationQuizGame({
                   borderLeftColor: lineColor?.color || borderColor,
                 }}
               >
-                {line}
+                {index + 1}. {line}
               </button>
             );
           })}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SubwayData, QuizQuestion, QuizScore } from '@/core/types';
 import { generateQuizQuestion } from '@/core/helpers';
 import { LINE_COLORS } from '@/core/constants/subway';
@@ -29,12 +29,32 @@ export function QuizGame({ subwayData, numberOfOptions, onExit }: QuizGameProps)
     total: 0,
   });
   const [isHintModalOpen, setIsHintModalOpen] = useState(false);
+  const [flashColor, setFlashColor] = useState<'green' | 'red' | null>(null);
+
+  // Suporte a teclas numéricas
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (selectedStation !== null || isHintModalOpen) return;
+
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= question.options.length) {
+        handleAnswer(question.options[num - 1]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [question.options, selectedStation, isHintModalOpen]);
 
   const handleAnswer = (station: string) => {
     if (selectedStation !== null) return;
 
     setSelectedStation(station);
     const isCorrect = station === question.correctStation;
+
+    // Flash de feedback
+    setFlashColor(isCorrect ? 'green' : 'red');
+    setTimeout(() => setFlashColor(null), 300);
 
     setScore((prev: QuizScore) => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
@@ -53,7 +73,7 @@ export function QuizGame({ subwayData, numberOfOptions, onExit }: QuizGameProps)
   const lineColor = LINE_COLORS[question.line];
 
   return (
-    <Wrapper>
+    <Wrapper flashColor={flashColor}>
       <div className="flex justify-between items-center w-full max-w-2xl">
         <BackButton onClick={onExit} />
         <ScoreDisplay score={score} />
@@ -74,10 +94,10 @@ export function QuizGame({ subwayData, numberOfOptions, onExit }: QuizGameProps)
         </p>
 
         <div className="grid grid-cols-1 gap-3">
-          {question.options.map((station: string) => (
+          {question.options.map((station: string, index: number) => (
             <OptionButton
               key={station}
-              station={station}
+              station={`${index + 1}. ${station}`}
               onClick={() => handleAnswer(station)}
               disabled={isAnswered}
               isCorrect={station === question.correctStation}

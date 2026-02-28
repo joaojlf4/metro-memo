@@ -8,6 +8,7 @@ type StationSearchProps = {
   onSelect: (station: string) => void;
   placeholder?: string;
   className?: string;
+  autoFocus?: boolean;
 };
 
 export function StationSearch({
@@ -15,12 +16,20 @@ export function StationSearch({
   onSelect,
   placeholder = 'Digite o nome da estação...',
   className = '',
+  autoFocus = false,
 }: StationSearchProps) {
   const [inputValue, setInputValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-focus quando especificado
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // Filtrar e ordenar estações baseado no input sanitizado
   const filteredStations = inputValue.trim()
@@ -81,9 +90,14 @@ export function StationSearch({
   };
 
   const handleSelect = (station: string) => {
-    setInputValue(station);
     setIsOpen(false);
     onSelect(station);
+    
+    // Auto-clear e auto-focus após seleção
+    setInputValue('');
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
